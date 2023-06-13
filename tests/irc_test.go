@@ -1,10 +1,11 @@
 package gotwichircparser_test
 
 import (
-	"go-twitch-irc-parser/irc"
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/rod41732/go-twitch-irc-parser/irc"
 )
 
 func TestSimpleIRC(t *testing.T) {
@@ -30,6 +31,18 @@ func TestSimpleIRC(t *testing.T) {
 	if string(parsed.Params) != expParams {
 		t.Errorf("Params: expected [%s], got: [%s]", expParams, parsed.Params)
 	}
+}
+
+func TestEscape(t *testing.T) {
+	msg := "@foo=bar\\sbaz :user!user@user.tmi.twitch.tv PRIVMSG #pajlada :this is a test"
+	parsed := irc.NewIRCMessage(msg)
+	if parsed.Tag[0].Key != "foo" {
+		t.Errorf("Tag key: expected [foo], got: [%s]", parsed.Tag[0])
+	}
+	if parsed.Tag[0].Value != "bar baz" {
+		t.Errorf("Tag value: expected [bar baz], got: [%s]", parsed.Tag[0])
+	}
+
 }
 
 func TestDankIRC(t *testing.T) {

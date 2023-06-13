@@ -1,5 +1,7 @@
 package irc
 
+import "strings"
+
 type TagEntry struct {
 	Key   string
 	Value string
@@ -22,12 +24,54 @@ func hash(s string, m int) int {
 	return (int(c)%m + m) % m
 }
 
+func realUnescapeValue(s string) string {
+	nextEscaped := false
+	unescaper := func(r rune) rune {
+		if nextEscaped {
+			nextEscaped = false
+			switch r {
+			case ':':
+				return ';'
+			case 'r':
+				return '\r'
+			case 'n':
+				return '\n'
+			case 's':
+				return ' '
+			default:
+				return r
+			}
+		} else if r == '\\' {
+			nextEscaped = true
+			return -1
+		} else {
+			return r
+		}
+	}
+	return strings.Map(unescaper, s)
+}
+
+func unescapeValue(s string) string {
+	hasEscape := false
+	for _, c := range s {
+		if c == '\\' {
+			hasEscape = true
+		}
+	}
+	if !hasEscape {
+		return s
+	} else {
+		return realUnescapeValue(s)
+	}
+}
+
 func parseTags(raw string) []TagEntry {
 	idx := 0
 	tags := make([]TagEntry, 0, 31)
 
 	var keyStart int
 	var valueStart int
+	// var lc byte
 
 wholeParsing:
 	for ; idx < len(raw); idx++ {
@@ -35,6 +79,7 @@ wholeParsing:
 		keyStart = idx
 		tags = append(tags, TagEntry{raw[keyStart:idx], ""})
 		for ; idx < len(raw); idx++ {
+			// lc = raw[idx]
 			if raw[idx] == ';' {
 				tags[len(tags)-1].Key = raw[keyStart:idx]
 				continue wholeParsing
@@ -52,13 +97,14 @@ wholeParsing:
 		// value
 		valueStart = idx
 		for ; idx < len(raw); idx++ {
+			// raw[idx] = raw[idx]
 			if raw[idx] == ';' {
-				tags[len(tags)-1].Value = raw[valueStart:idx]
+				tags[len(tags)-1].Value = unescapeValue(raw[valueStart:idx])
 				continue wholeParsing
 			}
 		}
 		// value EOF
-		tags[len(tags)-1].Value = raw[valueStart:idx]
+		tags[len(tags)-1].Value = unescapeValue(raw[valueStart:idx])
 	}
 	return tags
 }
@@ -70,46 +116,45 @@ func (m *IRCMessage) ParseTags() {
 func NewIRCMessage(raw string) IRCMessage {
 	parsed := IRCMessage{}
 
-	rawBytes := raw
-	n := len(rawBytes)
+	n := len(raw)
 	idx := 0
 	// tag: @foo=bar;foo2=bar2...
-	if rawBytes[idx] == '@' {
+	if raw[idx] == '@' {
 		start := idx + 1
 		for idx = start; idx < n; idx++ {
-			if rawBytes[idx] == ' ' {
+			if raw[idx] == ' ' {
 				break
 			}
 		}
-		parsed.RawTags = (rawBytes[start:idx])
-		parsed.Tag = parseTags(rawBytes[start:idx])
+		parsed.RawTags = (raw[start:idx])
+		parsed.Tag = parseTags(raw[start:idx])
 		idx++
 	}
 
 	// something like :userlogin!userlogin@userlogin.tmi.twitch.tv
-	if rawBytes[idx] == ':' {
+	if raw[idx] == ':' {
 		start := idx + 1
 		for idx = start; idx < n; idx++ {
-			if rawBytes[idx] == ' ' {
+			if raw[idx] == ' ' {
 				break
 			}
 		}
-		parsed.Prefix = (rawBytes[start:idx])
+		parsed.Prefix = (raw[start:idx])
 		idx++
 	}
 
 	// command e.g. PRIVMSG
 	start := idx
 	for idx = start; idx < n; idx++ {
-		if rawBytes[idx] == ' ' {
+		if raw[idx] == ' ' {
 			break
 		}
 	}
-	parsed.Command = (rawBytes[start:idx])
+	parsed.Command = (raw[start:idx])
 	idx++
 
 	// params: everything after command e.g. "#pajlada :this is my message"
-	parsed.Params = (rawBytes[idx:])
+	parsed.Params = (raw[idx:])
 
 	return parsed
 }

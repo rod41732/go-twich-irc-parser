@@ -70,23 +70,25 @@ func NewIRCMessage(raw string) IRCMessage {
 	parsed := IRCMessage{}
 
 	rawBytes := raw
+	n := len(rawBytes)
 	idx := 0
 	// tag: @foo=bar;foo2=bar2...
 	if rawBytes[idx] == '@' {
 		start := idx + 1
-		for idx = start; idx < len(rawBytes); idx++ {
+		for idx = start; idx < n; idx++ {
 			if rawBytes[idx] == ' ' {
 				break
 			}
 		}
 		parsed.RawTags = (rawBytes[start:idx])
+		parsed.Tag = parseTags(rawBytes[start:idx])
 		idx++
 	}
 
 	// something like :userlogin!userlogin@userlogin.tmi.twitch.tv
 	if rawBytes[idx] == ':' {
 		start := idx + 1
-		for idx = start; idx < len(rawBytes); idx++ {
+		for idx = start; idx < n; idx++ {
 			if rawBytes[idx] == ' ' {
 				break
 			}
@@ -97,7 +99,7 @@ func NewIRCMessage(raw string) IRCMessage {
 
 	// command e.g. PRIVMSG
 	start := idx
-	for idx = start; idx < len(rawBytes); idx++ {
+	for idx = start; idx < n; idx++ {
 		if rawBytes[idx] == ' ' {
 			break
 		}

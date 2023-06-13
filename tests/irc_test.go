@@ -30,7 +30,71 @@ func TestSimpleIRC(t *testing.T) {
 	if string(parsed.Params) != expParams {
 		t.Errorf("Params: expected [%s], got: [%s]", expParams, parsed.Params)
 	}
+}
 
+func TestDankIRC(t *testing.T) {
+	msg := "@foo=bar :user!user@user.tmi.twitch.tv PRIVMSG #pajlada :this is a test"
+	parsed := irc.NewIRCMessage(msg)
+	if len(parsed.Tag) != 1 {
+		t.Error("Expected 1, got", len(parsed.Tag))
+	}
+	t.Logf("%v", parsed.Tag)
+
+	msg = "@foo=bar;trail :user!user@user.tmi.twitch.tv PRIVMSG #pajlada :this is a test"
+	parsed = irc.NewIRCMessage(msg)
+	if len(parsed.Tag) != 2 {
+		t.Error("Expected 2, got", len(parsed.Tag))
+	}
+	t.Logf("%v", parsed.Tag)
+
+	msg = "@foo=bar;trail_eq= :user!user@user.tmi.twitch.tv PRIVMSG #pajlada :this is a test"
+	parsed = irc.NewIRCMessage(msg)
+	if len(parsed.Tag) != 2 {
+		t.Error("Expected 2, got", len(parsed.Tag))
+	}
+	t.Logf("%v", parsed.Tag)
+
+	msg = "@foo=bar;mis;trail_eq= :user!user@user.tmi.twitch.tv PRIVMSG #pajlada :this is a test"
+	parsed = irc.NewIRCMessage(msg)
+	if len(parsed.Tag) != 3 {
+		t.Error("Expected 3, got", len(parsed.Tag))
+	}
+	t.Logf("%v", parsed.Tag)
+
+	msg = "@foo=bar;empty=;trail_eq= :user!user@user.tmi.twitch.tv PRIVMSG #pajlada :this is a test"
+	parsed = irc.NewIRCMessage(msg)
+	if len(parsed.Tag) != 3 {
+		t.Error("Expected 3, got", len(parsed.Tag))
+	}
+	t.Logf("%v", parsed.Tag)
+
+	msg = "@foo=bar;empty=;trail_eq=;baz=quux :user!user@user.tmi.twitch.tv PRIVMSG #pajlada :this is a test"
+	parsed = irc.NewIRCMessage(msg)
+	if len(parsed.Tag) != 4 {
+		t.Error("Expected 4, got", len(parsed.Tag))
+	}
+	t.Logf("%v", parsed.Tag)
+
+	msg = "@mis;key=value :user!user@user.tmi.twitch.tv PRIVMSG #pajlada :this is a test"
+	parsed = irc.NewIRCMessage(msg)
+	if len(parsed.Tag) != 2 {
+		t.Error("Expected 2, got", len(parsed.Tag))
+	}
+	t.Logf("%v", parsed.Tag)
+
+	msg = "@mis;mis2 :user!user@user.tmi.twitch.tv PRIVMSG #pajlada :this is a test"
+	parsed = irc.NewIRCMessage(msg)
+	if len(parsed.Tag) != 2 {
+		t.Error("Expected 2, got", len(parsed.Tag))
+	}
+	t.Logf("%v", parsed.Tag)
+
+	msg = "@mis=;key=value :user!user@user.tmi.twitch.tv PRIVMSG #pajlada :this is a test"
+	parsed = irc.NewIRCMessage(msg)
+	if len(parsed.Tag) != 2 {
+		t.Error("Expected 2, got", len(parsed.Tag))
+	}
+	t.Logf("%v", parsed.Tag)
 }
 
 func BenchmarkParsingSingleMessage(b *testing.B) {
@@ -44,7 +108,7 @@ func BenchmarkParsingSingleMessage(b *testing.B) {
 // 1.80
 // move to func 1.40 - 1.64
 // forget to reset timer ->  1.37 - 1.64
-// parse at same time, N 1.27 - 1.31
+// parse at same time, 1.12 1.30 1.39
 func BenchmarkParsing1000Messages(b *testing.B) {
 	f, err := os.ReadFile("../data.txt")
 	if err != nil {

@@ -26,38 +26,39 @@ func parseTags(raw string) []TagEntry {
 	idx := 0
 	tags := make([]TagEntry, 0, 31)
 
-	var keyEnd int
 	var keyStart int
 	var valueStart int
 
 wholeParsing:
-	for idx < len(raw) {
-		idx++
+	for ; idx < len(raw); idx++ {
 		// keyHash
 		keyStart = idx
+		tags = append(tags, TagEntry{raw[keyStart:idx], ""})
 		for ; idx < len(raw); idx++ {
 			if raw[idx] == ';' {
-				// TODO
-				tags = append(tags, TagEntry{raw[keyStart:keyEnd], ""})
-
+				tags[len(tags)-1].Key = raw[keyStart:idx]
 				continue wholeParsing
 			} else if raw[idx] == '=' {
+				tags[len(tags)-1].Key = raw[keyStart:idx]
 				idx++
 				break
 			}
 		}
-		keyEnd = idx
+		// traliing word?
+		if raw[idx-1] != '=' {
+			tags[len(tags)-1].Key = raw[keyStart:idx]
+		}
 
 		// value
 		valueStart = idx
 		for ; idx < len(raw); idx++ {
 			if raw[idx] == ';' {
-				tags = append(tags, TagEntry{raw[keyStart:keyEnd], raw[valueStart:idx]})
+				tags[len(tags)-1].Value = raw[valueStart:idx]
 				continue wholeParsing
 			}
 		}
 		// value EOF
-		tags = append(tags, TagEntry{raw[keyStart:keyEnd], raw[valueStart:idx]})
+		tags[len(tags)-1].Value = raw[valueStart:idx]
 	}
 	return tags
 }

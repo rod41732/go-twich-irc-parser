@@ -1,10 +1,15 @@
 package irc
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/rod41732/go-twitch-irc-parser/utils"
+)
 
 type TagEntry struct {
-	Key   string
-	Value string
+	Key           string
+	Value         string
+	needsUnescape bool
 }
 
 type IRCMessage struct {
@@ -77,7 +82,7 @@ wholeParsing:
 	for ; idx < len(raw); idx++ {
 		// keyHash
 		keyStart = idx
-		tags = append(tags, TagEntry{raw[keyStart:idx], ""})
+		tags = append(tags, TagEntry{raw[keyStart:idx], "", false})
 		for ; idx < len(raw); idx++ {
 			// lc = raw[idx]
 			if raw[idx] == ';' {
@@ -96,15 +101,27 @@ wholeParsing:
 
 		// value
 		valueStart = idx
+		needsUnescape := false
+
 		for ; idx < len(raw); idx++ {
 			// raw[idx] = raw[idx]
 			if raw[idx] == ';' {
-				tags[len(tags)-1].Value = unescapeValue(raw[valueStart:idx])
+				// tags[len(tags)-1].Value = utils.Unescape(raw[valueStart:idx])
+				tags[len(tags)-1].Value = raw[valueStart:idx]
+				tags[len(tags)-1].needsUnescape = needsUnescape
 				continue wholeParsing
+			} else if raw[idx] == '\\' {
+				needsUnescape = true
 			}
 		}
-		// value EOF
-		tags[len(tags)-1].Value = unescapeValue(raw[valueStart:idx])
+		tags[len(tags)-1].Value = raw[valueStart:idx]
+		tags[len(tags)-1].needsUnescape = needsUnescape
+	}
+
+	for i := range tags {
+		if tags[i].needsUnescape {
+			tags[i].Value = utils.Unescape(tags[i].Value)
+		}
 	}
 	return tags
 }
